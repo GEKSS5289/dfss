@@ -1,36 +1,14 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE module PUBLIC
         "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
-    <!-- 继承 Google Java Style 的规则 -->
-    <property name="severity" value="error"/>
-    <module name="SuppressionFilter">
-        <!-- 如果有需要忽略的文件或路径，可在此引入 suppression 文件 -->
-        <!-- <property name="file" value="config/checkstyle/suppressions.xml"/> -->
-    </module>
-
     <module name="TreeWalker">
-<!--        &lt;!&ndash; 引用 Google Java Style 规则集 &ndash;&gt;-->
-<!--        <module name="ImportControl">-->
-<!--            <property name="file" value="config/checkstyle/google_checks.xml"/>-->
-<!--        </module>-->
-
-        <!-- ===========================================================
-             禁止在代码中直接抛出 RuntimeException 或 Exception
-             =========================================================== -->
+        <!-- 禁止直接抛出或捕获 RuntimeException 和 Exception -->
         <module name="IllegalThrows">
-            <!-- 同时检查 throw 和 catch 语句 -->
-            <property name="illegalClassNames" value="java.lang.RuntimeException,java.lang.Exception"/>
-            <property name="message"
-                      value="不允许直接抛出或捕获 java.lang.RuntimeException 或 java.lang.Exception，请使用自定义的业务异常类型或具体子类。"/>
+            <property name="illegalClassNames"
+                      value="java.lang.RuntimeException,java.lang.Exception"/>
         </module>
-
-        <!-- 以下示例可根据需要启用更多规则 -->
-        <!-- 1. 类、方法、字段等命名风格（已在 google_checks.xml 中定义） -->
-        <!-- 2. 行长度限制（Google 默认 100） -->
-        <!-- 3. 缩进、空格规则、括号样式等均由 Google 规则集提供 -->
-
     </module>
 </module>
