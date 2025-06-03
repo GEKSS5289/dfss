@@ -19,7 +19,8 @@ public class ApiLoggingInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI();
         String method = request.getMethod();
         System.out.printf(">> [请求开始] %s %s%n", method, path);
-        return true; // 一定要返回 true，否则请求会被拦截住
+        throw new RuntimeException("123");
+//        return true; // 一定要返回 true，否则请求会被拦截住
     }
 
     @Override

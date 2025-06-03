@@ -26,6 +26,7 @@
         <mysql.version>8.0.33</mysql.version>
         <fastjson.vesrion>2.0.26</fastjson.vesrion>
         <lombok.version>1.18.30</lombok.version>
+        <checkstyle.version>3.2.0</checkstyle.version>
     </properties>
 
     <dependencyManagement>
@@ -65,28 +66,48 @@
         </dependencies>
     </dependencyManagement>
 
-    <!-- 5. 插件管理：编译插件 + Spring Boot 插件 等-->
     <build>
-        <pluginManagement>
-            <plugins>
-                <!-- 5.1 maven-compiler-plugin，统一使用 java.version -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
-                    <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
-                    </configuration>
-                </plugin>
 
-                <!-- 5.2 Spring Boot Maven Plugin -->
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring.boot.version}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+        <!-- 关键：在 <plugins> 中真正启用 Checkstyle -->
+        <plugins>
+            <!-- 1. 编译插件（可选，通常在 pluginManagement 中声明版本，这里无须重复） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+
+            <!-- 2. Spring Boot Plugin（同理，如需实际使用可加在此处） -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- 3. Checkstyle 插件：放在 <plugins> 下，才会在 validate 阶段运行 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle.version}</version>
+                <executions>
+                    <execution>
+                        <!-- 绑定到 validate 阶段 -->
+                        <id>checkstyle-validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- 这个路径相对于父 POM 所在的目录 -->
+                    <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <!-- 违反规则时让构建失败 -->
+                    <failsOnError>true</failsOnError>
+                </configuration>
+            </plugin>
+
+            <!-- 4. 若需要 PMD/SpotBugs 等，也同理放在 <plugins> 中 -->
+            <!-- <plugin>…</plugin> -->
+        </plugins>
     </build>
 </project>
