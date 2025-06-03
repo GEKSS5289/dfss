@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <!-- 1. 继承父 POM，自动获取版本、插件与依赖管理 -->
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.dfss</groupId>
+        <artifactId>dfss-project</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- 2. 本模块坐标 -->
+    <groupId>com.dfss.data</groupId>
+    <artifactId>dfss-data</artifactId>
+
+    <!-- 3. 删除原来的 <properties>：编译、编码 都由父 POM 继承 -->
+
+    <!-- 4. 依赖：省略版本号，由父 POM 的 dependencyManagement 统一管理 -->
+    <dependencies>
+        <!-- 4.1 MyBatis-Plus Starter（版本由父 POM 控制） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!-- 4.2 JSqlParser（同上） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+        </dependency>
+
+        <!-- 4.3 MySQL 驱动 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+        <!-- 4.4 dfss-exception：由于此模块与父 POM 同一版本，推荐直接用 ${project.version} -->
+        <dependency>
+            <groupId>com.dfss.exception</groupId>
+            <artifactId>dfss-exception</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+
+    </dependencies>
+
+    <!-- 5. 不需要声明编译插件与编码，因为均继承自父 POM -->
+
+</project>

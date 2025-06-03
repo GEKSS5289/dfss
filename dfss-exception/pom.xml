@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <!-- 1. 继承父 POM，直接获取版本、插件、编码等 -->
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.dfss</groupId>
+        <artifactId>dfss-project</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- 2. 本模块坐标 -->
+    <groupId>com.dfss.exception</groupId>
+    <artifactId>dfss-exception</artifactId>
+
+    <!-- 3. 如果以后此模块需要第三方依赖再添加即可 -->
+    <!--    目前无需定义任何 <dependencies> 或 <properties>，全部继承父 POM。 -->
+
+</project>
