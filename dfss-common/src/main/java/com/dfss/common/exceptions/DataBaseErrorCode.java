@@ -1,5 +1,5 @@
 // 文件：com/dfsss/data/exception/DataBaseErrorCode.java
-package com.dfss.exception;
+package com.dfss.common.exceptions;
 
 /**
  * <p>数据库操作异常枚举。列举了 DataBaseOperation 中可能抛出的各种错误类型。</p>

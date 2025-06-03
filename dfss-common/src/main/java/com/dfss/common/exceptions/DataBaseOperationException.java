@@ -1,5 +1,5 @@
 // 文件：com/dfsss/data/exception/DataBaseOperationException.java
-package com.dfss.exception;
+package com.dfss.common.exceptions;
 
 /**
  * <p>统一的数据操作运行时异常。所有 DataBaseOperation 中的异常场景都使用此类抛出，</p>

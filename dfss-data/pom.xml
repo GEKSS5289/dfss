@@ -38,13 +38,11 @@
             <artifactId>mysql-connector-java</artifactId>
         </dependency>
 
-        <!-- 4.4 dfss-exception：由于此模块与父 POM 同一版本，推荐直接用 ${project.version} -->
         <dependency>
-            <groupId>com.dfss.exception</groupId>
-            <artifactId>dfss-exception</artifactId>
+            <groupId>com.dfss.common</groupId>
+            <artifactId>dfss-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-
 
     </dependencies>
 

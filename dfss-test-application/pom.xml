@@ -23,16 +23,6 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.dfss.common</groupId>
-            <artifactId>dfss-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.dfss.exception</groupId>
-            <artifactId>dfss-exception</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
             <groupId>com.dfss.springboot</groupId>
             <artifactId>dfss-spring-boot</artifactId>
             <version>${project.version}</version>
