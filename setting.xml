@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <!-- 本地仓库位置（可按需修改，默认是用户家目录下的 .m2/repository）-->
+  <!--
+  <localRepository>/path/to/local/repo</localRepository>
+  -->
+
+  <!-- 激活默认 JVM 配置文件 -->
+  <pluginGroups>
+    <!-- 示例：如果有私有插件，放在这里 -->
+  </pluginGroups>
+
+  <!-- 定义各类服务器的认证信息，如果要访问私有仓库或私有 Nexus/Artifactory，需要在这里配置 -->
+  <servers>
+    <!-- 示例：私有仓库身份认证 -->
+    <!--
+    <server>
+      <id>my-private-repo</id>
+      <username>your-username</username>
+      <password>your-password</password>
+    </server>
+    -->
+  </servers>
+
+  <!-- 全局变量，可在 pom.xml 中使用 ${…} 进行替换 -->
+  <mirrors>
+    <!-- 阿里云公共仓库镜像 -->
+    <mirror>
+      <id>aliyun-maven-central</id>
+      <name>Aliyun Maven Central Mirror</name>
+      <url>https://maven.aliyun.com/repository/central</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 Spring 仓库镜像（可选，如果你项目中需要 Spring 的快照仓库） -->
+    <mirror>
+      <id>aliyun-spring</id>
+      <name>Aliyun Spring Repository Mirror</name>
+      <url>https://maven.aliyun.com/repository/spring</url>
+      <mirrorOf>spring-plugin, spring-libs-release, spring-libs-milestone, spring-libs-snapshot</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 JBoss 仓库镜像（可选） -->
+    <mirror>
+      <id>aliyun-jboss</id>
+      <name>Aliyun JBoss Repository Mirror</name>
+      <url>https://maven.aliyun.com/repository/jboss</url>
+      <mirrorOf>jboss</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 Google 仓库镜像（可选，用于 Android/Google 相关依赖） -->
+    <mirror>
+      <id>aliyun-google</id>
+      <name>Aliyun Google Repository Mirror</name>
+      <url>https://maven.aliyun.com/repository/google</url>
+      <mirrorOf>google, google-maven-central</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 SpringPlugins 仓库镜像（可选） -->
+    <mirror>
+      <id>aliyun-spring-plugins</id>
+      <name>Aliyun SpringPlugins Repository Mirror</name>
+      <url>https://maven.aliyun.com/repository/spring-plugin</url>
+      <mirrorOf>spring-plugin</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 Maven 插件仓库镜像（可选） -->
+    <mirror>
+      <id>aliyun-maven</id>
+      <name>Aliyun Maven Plugins Mirror</name>
+      <url>https://maven.aliyun.com/repository/maven-public</url>
+      <mirrorOf>maven-plugin, maven-public</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 SpringSnapshot 仓库镜像（可选） -->
+    <mirror>
+      <id>aliyun-spring-snapshot</id>
+      <name>Aliyun Spring Snapshot Mirror</name>
+      <url>https://maven.aliyun.com/repository/spring-snapshot</url>
+      <mirrorOf>spring-snapshot</mirrorOf>
+    </mirror>
+
+    <!-- 阿里云 Apache 快照仓库镜像（可选） -->
+    <mirror>
+      <id>aliyun-apache-snapshots</id>
+      <name>Aliyun Apache Snapshots Mirror</name>
+      <url>https://maven.aliyun.com/repository/apache-snapshots</url>
+      <mirrorOf>apache.snapshots</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <!-- 可选：如果需要额外的仓库配置，可以通过 profiles 来激活 -->
+  <profiles>
+    <!-- 示例：启用阿里云全面公共仓库 -->
+    <profile>
+      <id>aliyun-public</id>
+      <repositories>
+        <repository>
+          <id>aliyun-central</id>
+          <name>Aliyun Central</name>
+          <url>https://maven.aliyun.com/repository/central</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+        <repository>
+          <id>aliyun-snapshots</id>
+          <name>Aliyun Snapshots</name>
+          <url>https://maven.aliyun.com/repository/snapshots</url>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </repository>
+        <repository>
+          <id>aliyun-public</id>
+          <name>Aliyun Public</name>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+
+      <pluginRepositories>
+        <pluginRepository>
+          <id>aliyun-plugins</id>
+          <name>Aliyun Plugin Public</name>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+
+  <!-- 默认激活 aliyun-public 配置 -->
+  <activeProfiles>
+    <activeProfile>aliyun-public</activeProfile>
+  </activeProfiles>
+
+</settings>
