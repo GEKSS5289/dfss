@@ -3,39 +3,34 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!-- 1. 基本坐标 -->
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.dfss</groupId>
     <artifactId>dfss-project</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <!-- 2. 子模块列表 -->
     <modules>
         <module>dfss-data</module>
         <module>dfss-exception</module>
         <module>dfss-test-application</module>
+        <module>dfss-common</module>
+        <module>dfss-spring-boot</module>
     </modules>
 
-    <!-- 3. 全局属性：统一 JDK 版本、编码、各库版本等 -->
     <properties>
-        <!-- JDK 与编译版本 -->
         <java.version>19</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <!-- 源码与资源编码 -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- 依赖版本统一管理 -->
         <spring.boot.version>3.5.0</spring.boot.version>
         <mybatis.plus.version>3.5.12</mybatis.plus.version>
         <mysql.version>8.0.33</mysql.version>
-        <junit.jupiter.version>5.9.2</junit.jupiter.version>
+        <fastjson.vesrion>2.0.26</fastjson.vesrion>
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
-    <!-- 4. 依赖管理：引入 Spring Boot BOM + MyBatis-Plus、MySQL 等版本 -->
     <dependencyManagement>
         <dependencies>
-            <!-- 4.1 引入 Spring Boot 的依赖 BOM -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -43,8 +38,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-            <!-- 4.2 MyBatis-Plus Starter 与 JSqlParser（版本来自 ${mybatis.plus.version}） -->
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
@@ -55,12 +48,20 @@
                 <artifactId>mybatis-plus-jsqlparser</artifactId>
                 <version>${mybatis.plus.version}</version>
             </dependency>
-
-            <!-- 4.3 MySQL 驱动 -->
             <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
                 <version>${mysql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.vesrion}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

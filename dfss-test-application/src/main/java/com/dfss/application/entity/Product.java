@@ -1,5 +1,6 @@
 package com.dfss.application.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -16,7 +17,7 @@ public class Product implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 主键 ID，自增 */
-    @TableId
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /** 商品名称 */

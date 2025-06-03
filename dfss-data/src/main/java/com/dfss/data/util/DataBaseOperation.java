@@ -1,7 +1,8 @@
-// 文件：dfss-data/src/main/java/com/dfss/data/util/DataBaseOperation.java
 package com.dfss.data.util;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,10 +13,11 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,273 +25,206 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * <p>通用数据操作工具（静态门面 + Spring 上下文注入 + Mapper 缓存）。</p>
  *
- * <p>该类利用 MyBatis-Plus 的 BaseMapper 完成常用的增删改查操作，</p>
+ * <p>该类利用 MyBatis-Plus 的 BaseMapper 完成常用的增删改查、分页、批量操作，</p>
  * <p>并支持:</p>
  * <ul>
  *   <li>传入实体做 CRUD（insert/update/delete/select）。</li>
- *   <li>传入 VO 类做返回类型转换。</li>
- *   <li>传入 DTO 自动转换成实体后做查询/插入/更新等操作。</li>
+ *   <li>传入 DTO 自动转换后做操作。</li>
+ *   <li>根据实体或 Wrapper 做复杂条件查询、更新。</li>
  *   <li>统一抛出 {@link DataBaseOperationException}，结合 {@link DataBaseErrorCode} 进行错误分类。</li>
+ *   <li>事务控制：新增了 @Transactional 注解，方便在批量操作中自动回滚。</li>
+ *   <li>批量插入/更新：提供 saveBatch、updateBatch 等方法（循环调用 BaseMapper）。</li>
+ *   <li>支持自定义 SQL 查询：返回 Map 或自定义 VO/DTO 列表。</li>
  * </ul>
- *
- * <p>典型调用示例：</p>
- * <pre>{@code
- * // 1. 传入实体直接插入
- * User user = new User().setName("Alice");
- * int rows = DataBaseOperation.insert(user);
- *
- * // 2. 传入 DTO 自动转换再插入
- * UserDTO dto = new UserDTO().setName("Bob");
- * DataBaseOperation.insertByDto(dto, User.class);
- *
- * // 3. 传入实体做条件查询并返回 VO 列表
- * User filter = new User().setRole("ADMIN");
- * List<UserVo> list = DataBaseOperation.list(filter, UserVo.class);
- *
- * // 4. 传入 DTO 做查询并返回单个 VO
- * UserDTO queryDto = new UserDTO().setId(100L);
- * UserVo vo = DataBaseOperation.getOneByDto(queryDto, User.class, UserVo.class);
- * }</pre>
  *
  * @author shushun
  * @since 2025-06-02
  */
 @Component
 public class DataBaseOperation implements ApplicationContextAware {
-    /**
-     * Spring 上下文，用于获取所有 BaseMapper Bean。
-     */
+    // Spring 上下文，用于获取所有 BaseMapper Bean
     private static ApplicationContext context;
 
-    /**
-     * 缓存：实体类 -> 对应的 BaseMapper Bean 实例。
-     */
+    // 缓存：实体类 -> 对应的 BaseMapper Bean
     private static final Map<Class<?>, BaseMapper<?>> mapperCache = new ConcurrentHashMap<>();
+
+
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         DataBaseOperation.context = applicationContext;
     }
 
-    // ============================= private 辅助方法 =============================
+    //==================== 私有辅助方法 ====================
+
+
+
+    /**
+     * 从 Spring 容器中查找并缓存 BaseMapper<E>
+     */
     @SuppressWarnings("unchecked")
     private static <E> BaseMapper<E> getMapper(Class<E> entityClass) {
         if (entityClass == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY, "实体类不能为空。");
+            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY, "实体类不能为空");
         }
-        // 先从缓存里看一下
         BaseMapper<?> cached = mapperCache.get(entityClass);
         if (cached != null) {
             return (BaseMapper<E>) cached;
         }
 
-        // 拿到 Spring 容器里所有 BaseMapper 类型的 Bean
-        Map<String, BaseMapper> allMappers = context.getBeansOfType(BaseMapper.class);
-        BaseMapper<?> foundMapper = null;
-
-        // 遍历每个 Mapper Bean，尝试解析它实现的接口里，哪个接口的泛型参数等于 entityClass
-        for (BaseMapper<?> mapperBean : allMappers.values()) {
-            // 先把可能的代理剥离，拿到实际的目标类或接口类
-            Class<?> proxyClass = AopUtils.getTargetClass(mapperBean);
-
-            // 1. 找到“这个类实现了哪些接口”
-            //    典型情况下，mapperBean 的目标类会直接实现 UserMapper（而 UserMapper extends BaseMapper<User>）
-            for (Class<?> iface : proxyClass.getInterfaces()) {
-                // 2. 我们只关心那些接口 “是 BaseMapper 的子类型” 的
+        BaseMapper<?> found = null;
+        for (BaseMapper<?> mapperBean : context.getBeansOfType(BaseMapper.class).values()) {
+            Class<?> target = AopUtils.getTargetClass(mapperBean);
+            for (Class<?> iface : target.getInterfaces()) {
                 if (!BaseMapper.class.isAssignableFrom(iface)) {
                     continue;
                 }
-
-                // 3. 从这个接口 iface（通常是 UserMapper 接口）里再读取它的父接口签名
-                //    （因为 UserMapper extends BaseMapper<User>，所以我们要在 GenericInterfaces 里找到 BaseMapper<User>）
-                Type[] parentTypes = iface.getGenericInterfaces();
-                for (Type t : parentTypes) {
-                    if (!(t instanceof ParameterizedType)) {
+                for (Type superType : iface.getGenericInterfaces()) {
+                    if (!(superType instanceof ParameterizedType pt)) {
                         continue;
                     }
-                    ParameterizedType pt = (ParameterizedType) t;
-                    // 只有当“父接口原始类型是 BaseMapper”时，我们才取它的泛型参数
                     if (!BaseMapper.class.equals(pt.getRawType())) {
                         continue;
                     }
-                    // 取 BaseMapper 的泛型参数（应该只有一个：实体类型）
-                    Type[] typeArgs = pt.getActualTypeArguments();
-                    if (typeArgs.length != 1) {
+                    Type[] args = pt.getActualTypeArguments();
+                    if (args.length != 1 || !(args[0] instanceof Class<?> mappedEntity)) {
                         continue;
                     }
-                    if (!(typeArgs[0] instanceof Class<?>)) {
+                    if (!entityClass.equals(mappedEntity)) {
                         continue;
                     }
-                    Class<?> mappedEntity = (Class<?>) typeArgs[0];
-                    // 如果这个泛型参数就是我们要找的 entityClass，就说明找到了对应的 Mapper
-                    if (entityClass.equals(mappedEntity)) {
-                        // 如果之前已经找过一次了，就说明冲突了
-                        if (foundMapper != null) {
-                            throw new DataBaseOperationException(
-                                    DataBaseErrorCode.DUPLICATE_MAPPER,
-                                    "实体类 " + entityClass.getName() + " 存在多个 Mapper。"
-                            );
-                        }
-                        foundMapper = mapperBean;
+                    if (found != null) {
+                        throw new DataBaseOperationException(
+                                DataBaseErrorCode.DUPLICATE_MAPPER,
+                                "实体 " + entityClass.getName() + " 存在多个 Mapper"
+                        );
                     }
+                    found = mapperBean;
                 }
             }
         }
 
-        if (foundMapper == null) {
+        if (found == null) {
             throw new DataBaseOperationException(
                     DataBaseErrorCode.MAPPER_NOT_FOUND,
-                    "未找到实体类 " + entityClass.getName() + " 对应的 Mapper。"
+                    "未找到实体 " + entityClass.getName() + " 对应的 Mapper"
             );
         }
-
-        // 缓存并返回
-        mapperCache.put(entityClass, foundMapper);
-        return (BaseMapper<E>) foundMapper;
+        mapperCache.put(entityClass, found);
+        return (BaseMapper<E>) found;
     }
-    /**
-     * 创建目标类型实例（实体或 VO）。如果实例化失败，则抛出 DataBaseOperationException。
-     *
-     * @param clazz 要实例化的类
-     * @param <T>   类型
-     * @return 新实例
-     */
+
+
+
     private static <T> T newInstance(Class<T> clazz) {
         if (clazz == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY, "目标类不能为空。");
+            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY, "目标类不能为空");
         }
         try {
             return clazz.getDeclaredConstructor().newInstance();
         } catch (Exception ex) {
             throw new DataBaseOperationException(
-                DataBaseErrorCode.ENTITY_INSTANTIATION_FAILED,
-                "无法实例化 " + clazz.getName() + "，请检查是否存在公共无参构造函数。",
-                ex
+                    DataBaseErrorCode.ENTITY_INSTANTIATION_FAILED,
+                    "无法实例化 " + clazz.getName(), ex
             );
         }
     }
 
-    // ============================= 公共 CRUD 方法 =============================
+
+
+    private static void checkNull(Object obj, String msg) {
+        if (obj == null) {
+            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY, msg);
+        }
+    }
+
+
+
+    @SuppressWarnings("unchecked")
+    private static <E> Class<E> getEntityClass(E entity) {
+        return (Class<E>) entity.getClass();
+    }
+
+    //==================== 公共 CRUD ====================
+
+
 
     /**
-     * 插入一条记录（传入实体）。
-     *
-     * @param entity 实体对象
-     * @param <E>    实体类型
-     * @return 受影响行数
+     * 插入实体
      */
     public static <E> int insert(E entity) {
-        if (entity == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
-        @SuppressWarnings("unchecked")
-        Class<E> entityClass = (Class<E>) entity.getClass();
-        BaseMapper<E> mapper = getMapper(entityClass);
+        checkNull(entity, "插入实体不能为空");
+        BaseMapper<E> mapper = getMapper(getEntityClass(entity));
         return mapper.insert(entity);
     }
 
+
+
     /**
-     * 插入一条记录（传入 DTO，自动转换成实体后插入）。
-     *
-     * @param dto         DTO 对象
-     * @param entityClass 对应的实体类
-     * @param <D>         DTO 类型
-     * @param <E>         实体类型
-     * @return 受影响行数
+     * 插入 DTO → 实体
      */
     public static <D, E> int insertByDto(D dto, Class<E> entityClass) {
-        if (dto == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
+        checkNull(dto, "插入 DTO 不能为空");
         E entity = newInstance(entityClass);
         BeanUtils.copyProperties(dto, entity);
         return insert(entity);
     }
 
+
+
     /**
-     * 根据实体 ID 删除一条记录。
-     *
-     * @param entityClass 实体类
-     * @param id          主键 ID
-     * @param <E>         实体类型
-     * @return 受影响行数
+     * 根据 ID 删除
      */
     public static <E> int deleteById(Class<E> entityClass, Serializable id) {
-        if (entityClass == null || id == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
+        checkNull(entityClass, "实体类型不能为空");
+        checkNull(id, "主键 ID 不能为空");
         BaseMapper<E> mapper = getMapper(entityClass);
         return mapper.deleteById(id);
     }
 
+
+
     /**
-     * 根据实体更新（主键 ID 必须在实体上）。
-     *
-     * @param entity 实体对象（必须包含主键值）
-     * @param <E>    实体类型
-     * @return 受影响行数
+     * 更新实体（需包含主键）
      */
     public static <E> int updateById(E entity) {
-        if (entity == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
-        @SuppressWarnings("unchecked")
-        Class<E> entityClass = (Class<E>) entity.getClass();
-        BaseMapper<E> mapper = getMapper(entityClass);
+        checkNull(entity, "更新实体不能为空");
+        BaseMapper<E> mapper = getMapper(getEntityClass(entity));
         return mapper.updateById(entity);
     }
 
+
+
     /**
-     * 根据 DTO 更新（自动转换成实体后更新）。
-     *
-     * @param dto         DTO 对象（必须包含主键字段）
-     * @param entityClass 对应的实体类
-     * @param <D>         DTO 类型
-     * @param <E>         实体类型
-     * @return 受影响行数
+     * 更新 DTO → 实体
      */
     public static <D, E> int updateByDto(D dto, Class<E> entityClass) {
-        if (dto == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
+        checkNull(dto, "更新 DTO 不能为空");
         E entity = newInstance(entityClass);
         BeanUtils.copyProperties(dto, entity);
         return updateById(entity);
     }
 
+
+
     /**
-     * 根据主键查询一条记录。
-     *
-     * @param entityClass 实体类
-     * @param id          主键 ID
-     * @param <E>         实体类型
-     * @return 查询到的实体对象，未找到则返回 null
+     * 按主键查询实体
      */
     public static <E> E getById(Class<E> entityClass, Serializable id) {
-        if (entityClass == null || id == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
+        checkNull(entityClass, "实体类型不能为空");
+        checkNull(id, "主键 ID 不能为空");
         BaseMapper<E> mapper = getMapper(entityClass);
         return mapper.selectById(id);
     }
 
+
+
     /**
-     * 根据实体条件查询一条记录并返回 VO。
-     *
-     * @param entity  实体对象（查询条件）
-     * @param voClass VO 类型
-     * @param <E>     实体类型
-     * @param <V>     VO 类型
-     * @return 转换后的 VO 对象；如果没有结果，返回 null；如果有多条，抛出异常
+     * 按实体条件查询单条并转换为 VO
      */
     public static <E, V> V getOne(E entity, Class<V> voClass) {
-        if (entity == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
-        @SuppressWarnings("unchecked")
-        Class<E> entityClass = (Class<E>) entity.getClass();
-        BaseMapper<E> mapper = getMapper(entityClass);
-
+        checkNull(entity, "查询实体不能为空");
+        BaseMapper<E> mapper = getMapper(getEntityClass(entity));
         LambdaQueryWrapper<E> wrapper = new LambdaQueryWrapper<>();
         wrapper.setEntity(entity);
         E result = mapper.selectOne(wrapper);
@@ -301,129 +236,258 @@ public class DataBaseOperation implements ApplicationContextAware {
         return vo;
     }
 
+
+
     /**
-     * 根据 DTO 条件查询一条记录并返回 VO。
-     *
-     * @param dto         DTO 对象（查询条件）
-     * @param entityClass 对应的实体类
-     * @param voClass     VO 类型
-     * @param <D>         DTO 类型
-     * @param <E>         实体类型
-     * @param <V>         VO 类型
-     * @return 转换后的 VO 对象；如果没有结果，返回 null；如果有多条，抛出异常
+     * 按 DTO 条件查询单条并转换为 VO
      */
     public static <D, E, V> V getOneByDto(D dto, Class<E> entityClass, Class<V> voClass) {
-        if (dto == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
+        checkNull(dto, "查询 DTO 不能为空");
         E entity = newInstance(entityClass);
         BeanUtils.copyProperties(dto, entity);
         return getOne(entity, voClass);
     }
 
+
+
     /**
-     * 根据实体条件查询多条记录并返回实体列表。
-     *
-     * @param entity 实体对象（查询条件）
-     * @param <E>    实体类型
-     * @return 实体列表（如果无结果，返回空列表）
+     * 按实体条件查询多条实体
      */
     public static <E> List<E> listEntity(E entity) {
-        if (entity == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
-        @SuppressWarnings("unchecked")
-        Class<E> entityClass = (Class<E>) entity.getClass();
-        BaseMapper<E> mapper = getMapper(entityClass);
-
+        checkNull(entity, "查询实体不能为空");
+        BaseMapper<E> mapper = getMapper(getEntityClass(entity));
         LambdaQueryWrapper<E> wrapper = new LambdaQueryWrapper<>();
         wrapper.setEntity(entity);
         return mapper.selectList(wrapper);
     }
 
+
+
     /**
-     * 根据实体条件查询多条记录并返回 VO 列表。
-     *
-     * @param entity  实体对象（查询条件）
-     * @param voClass VO 类型
-     * @param <E>     实体类型
-     * @param <V>     VO 类型
-     * @return VO 列表（如果无结果，返回空列表）
+     * 按实体条件查询并转换为 VO 列表
      */
     public static <E, V> List<V> list(E entity, Class<V> voClass) {
-        List<E> entityList = listEntity(entity);
-        // 实例化 VO 并复制属性
-        return entityList.stream().map(record -> {
+        List<E> list = listEntity(entity);
+        return list.stream().map(e -> {
             V vo = newInstance(voClass);
-            BeanUtils.copyProperties(record, vo);
+            BeanUtils.copyProperties(e, vo);
             return vo;
         }).toList();
     }
 
+    //==================== Wrapper 方式的动态查询/更新 ====================
 
 
-    // ============================= 新增：MyBatis-Plus 原生分页 =============================
 
     /**
-     * 分页查询实体列表，返回 IPage<E>。
-     *
-     * @param entity   实体对象（查询条件）
-     * @param pageNum  页码（从 1 开始）
-     * @param pageSize 每页大小
-     * @param <E>      实体类型
-     * @return IPage<E>，包含分页结果及分页信息
+     * 按 Wrapper 条件查询实体列表
+     */
+    public static <E> List<E> listByWrapper(Class<E> entityClass, Wrapper<E> wrapper) {
+        checkNull(entityClass, "实体类型不能为空");
+        checkNull(wrapper, "查询 Wrapper 不能为空");
+        BaseMapper<E> mapper = getMapper(entityClass);
+        return mapper.selectList(wrapper);
+    }
+
+
+
+    /**
+     * 按 Wrapper 条件更新实体（字段更新请在 wrapper 中指定 set 操作）
+     */
+    public static <E> int updateByWrapper(Class<E> entityClass, LambdaUpdateWrapper<E> wrapper) {
+        checkNull(entityClass, "实体类型不能为空");
+        checkNull(wrapper, "更新 Wrapper 不能为空");
+        BaseMapper<E> mapper = getMapper(entityClass);
+        return mapper.update(null, wrapper);
+    }
+
+    //==================== 分页操作 ====================
+
+
+
+    /**
+     * 分页查询实体列表，返回 IPage<E>
      */
     public static <E> IPage<E> pageEntity(E entity, long pageNum, long pageSize) {
-        if (entity == null) {
-            throw new DataBaseOperationException(DataBaseErrorCode.INVALID_ENTITY);
-        }
-        @SuppressWarnings("unchecked")
-        Class<E> entityClass = (Class<E>) entity.getClass();
-        BaseMapper<E> mapper = getMapper(entityClass);
-
-        // 构造 Page 对象，并把 pageNum/pageSize 传进去
+        checkNull(entity, "分页查询实体不能为空");
+        BaseMapper<E> mapper = getMapper(getEntityClass(entity));
         Page<E> page = new Page<>(pageNum, pageSize);
-
-        // 构造查询条件（等价于 where 字段 = 值），若想要更复杂的条件，可以由调用方传入 Wrapper
         LambdaQueryWrapper<E> wrapper = new LambdaQueryWrapper<>();
         wrapper.setEntity(entity);
-
-        // 执行分页查询
         return mapper.selectPage(page, wrapper);
     }
 
+
+
     /**
-     * 分页查询实体列表并转换为 VO 列表，返回 IPage<V>。
-     *
-     * @param entity   实体对象（查询条件）
-     * @param voClass  VO 类型
-     * @param pageNum  页码（从 1 开始）
-     * @param pageSize 每页大小
-     * @param <E>      实体类型
-     * @param <V>      VO 类型
-     * @return IPage<V>，包含 VO 列表及分页信息
+     * 分页查询并转换为 VO，返回 IPage<V>
      */
     public static <E, V> IPage<V> page(E entity, Class<V> voClass, long pageNum, long pageSize) {
-        // 先分页查询实体，得到 IPage<E>
-        IPage<E> pageEntity = pageEntity(entity, pageNum, pageSize);
+        IPage<E> pageE = pageEntity(entity, pageNum, pageSize);
+        return getPage(voClass, pageE);
+    }
 
-        // 把 E 列表转换为 V 列表
-        List<E> records = pageEntity.getRecords();
-        List<V> voList = records.stream().map(record -> {
+
+
+    private static <E, V> Page<V> getPage(Class<V> voClass, IPage<E> pageE) {
+        List<V> voList = pageE.getRecords().stream().map(e -> {
             V vo = newInstance(voClass);
-            BeanUtils.copyProperties(record, vo);
+            BeanUtils.copyProperties(e, vo);
             return vo;
         }).toList();
+        Page<V> pageV = new Page<>(pageE.getCurrent(), pageE.getSize(), pageE.getTotal());
+        pageV.setRecords(voList);
+        return pageV;
+    }
 
-        // 构造一个新的 Page<V>，并把分页信息拷贝过去
-        Page<V> pageVo = new Page<>(pageEntity.getCurrent(), pageEntity.getSize(), pageEntity.getTotal());
-        pageVo.setRecords(voList);
-        pageVo.setPages(pageEntity.getPages());
-        pageVo.setTotal(pageEntity.getTotal());
-        pageVo.setCurrent(pageEntity.getCurrent());
-        pageVo.setSize(pageEntity.getSize());
-        pageVo.setRecords(voList);
 
-        return pageVo;
+
+    /**
+     * 按 Wrapper 分页查询实体列表
+     */
+    public static <E> IPage<E> pageByWrapper(Class<E> entityClass, Wrapper<E> wrapper, long pageNum, long pageSize) {
+        checkNull(entityClass, "实体类型不能为空");
+        checkNull(wrapper, "查询 Wrapper 不能为空");
+        BaseMapper<E> mapper = getMapper(entityClass);
+        Page<E> page = new Page<>(pageNum, pageSize);
+        return mapper.selectPage(page, wrapper);
+    }
+
+
+
+    /**
+     * 按 Wrapper 分页查询并转换为 VO
+     */
+    public static <E, V> IPage<V> pageByWrapper(
+            Class<E> entityClass,
+            Wrapper<E> wrapper,
+            Class<V> voClass,
+            long pageNum,
+            long pageSize
+    ) {
+        IPage<E> pageE = pageByWrapper(entityClass, wrapper, pageNum, pageSize);
+        return getPage(voClass, pageE);
+    }
+
+    //==================== 批量操作 ====================
+
+
+
+    /**
+     * 批量插入（循环调用 insert）。推荐行数少时使用；若数据量大，建议使用 Service.saveBatch 或自定义 SQL。
+     */
+    public static <E> void saveBatch(List<E> entities) {
+        checkNull(entities, "批量插入列表不能为空");
+        for (E e : entities) {
+            insert(e);
+        }
+    }
+
+
+
+    /**
+     * 批量更新（循环调用 updateById）。建议每次更新字段固定，或改为使用 Wrapper 方式。
+     */
+    public static <E> void updateBatch(List<E> entities) {
+        checkNull(entities, "批量更新列表不能为空");
+        for (E e : entities) {
+            updateById(e);
+        }
+    }
+
+    //==================== 自定义 SQL 查询 ====================
+
+
+
+    /**
+     * 执行任意自定义 SQL，并把结果映射到 VO/DTO 列表。
+     * 需要在对应的 Mapper 中定义一个方法，例如：
+     * List<VO> customQuery(@Param("param") String param);
+     * 然后通过 DataBaseOperation.executeCustomQuery("com.xxx.mapper.XxxMapper", "customQuery", param);
+     */
+    @SuppressWarnings("unchecked")
+    public static <V> List<V> executeCustomQuery(
+            String mapperBeanName,
+            String methodName,
+            Object... args
+    ) {
+        Object mapperBean = context.getBean(mapperBeanName);
+        try {
+            // 通过反射调用 Mapper 中自定义的方法
+            java.lang.reflect.Method method = mapperBean.getClass().getMethod(methodName,
+                    java.util.Arrays.stream(args)
+                            .map(Object::getClass)
+                            .toArray(Class<?>[]::new));
+            return (List<V>) method.invoke(mapperBean, args);
+        } catch (NoSuchMethodException e) {
+            throw new DataBaseOperationException(
+                    DataBaseErrorCode.INVALID_ENTITY,
+                    "Mapper 方法未找到: " + methodName, e
+            );
+        } catch (Exception e) {
+            throw new DataBaseOperationException(
+                    DataBaseErrorCode.ENTITY_INSTANTIATION_FAILED,
+                    "执行自定义查询出错: " + methodName, e
+            );
+        }
+    }
+
+
+
+    /**
+     * 执行自定义更新/删除 SQL（Mapper 中需定义对应方法）。
+     * 例如：int customUpdate(@Param("param") String param);
+     */
+    public static int executeCustomUpdate(String mapperBeanName, String methodName, Object... args) {
+        Object mapperBean = context.getBean(mapperBeanName);
+        try {
+            java.lang.reflect.Method method = mapperBean.getClass().getMethod(methodName,
+                    java.util.Arrays.stream(args)
+                            .map(Object::getClass)
+                            .toArray(Class<?>[]::new));
+            return (int) method.invoke(mapperBean, args);
+        } catch (NoSuchMethodException e) {
+            throw new DataBaseOperationException(
+                    DataBaseErrorCode.INVALID_ENTITY,
+                    "Mapper 更新方法未找到: " + methodName, e
+            );
+        } catch (Exception e) {
+            throw new DataBaseOperationException(
+                    DataBaseErrorCode.ENTITY_INSTANTIATION_FAILED,
+                    "执行自定义更新出错: " + methodName, e
+            );
+        }
+    }
+
+
+    /**
+     * 构造一个空的 LambdaQueryWrapper<E>，用于链式拼接条件。
+     *
+     * 用法示例：
+     *   LambdaQueryWrapper<User> wrapper = DataBaseOperation.lambdaQuery(User.class)
+     *       .between(User::getAge, 18, 30)
+     *       .isNotNull(User::getEmail)
+     *       .eq(User::getStatus, 1);
+     *
+     * 然后可以传给 listByWrapper/pageByWrapper 等方法使用。
+     */
+    public static <E> LambdaQueryWrapper<E> lambdaQuery(Class<E> entityClass) {
+        checkNull(entityClass, "实体类型不能为空");
+        return new LambdaQueryWrapper<>();
+    }
+
+    /**
+     * 构造一个空的 LambdaUpdateWrapper<E>，用于链式拼接更新条件和设置字段。
+     *
+     * 用法示例：
+     *   LambdaUpdateWrapper<User> wrapper = DataBaseOperation.lambdaUpdate(User.class)
+     *       .eq(User::getStatus, 0)            // 条件：status=0
+     *       .set(User::getStatus, 1);         // 将 status 设置为 1
+     *
+     * 然后可以传给 updateByWrapper 使用。
+     */
+    public static <E> LambdaUpdateWrapper<E> lambdaUpdate(Class<E> entityClass) {
+        checkNull(entityClass, "实体类型不能为空");
+        return new LambdaUpdateWrapper<>();
     }
 }

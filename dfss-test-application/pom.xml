@@ -9,52 +9,38 @@
     <parent>
         <groupId>com.dfss</groupId>
         <artifactId>dfss-project</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <!-- 2. 本模块坐标 -->
     <groupId>com.dfss.application</groupId>
     <artifactId>dfss-test-application</artifactId>
 
-    <!-- 3. 删除原来的 <properties> 编译配置，继承自父 POM -->
 
-    <!-- 4. 依赖清单：Spring Boot Starter、Web、Test，以及本地子模块 -->
     <dependencies>
-        <!-- 4.1 Spring Boot 基础 Starter（版本由父 POM 的 BOM 管理） -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- 4.2 Spring MVC Starter -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- 4.3 测试框架 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
-        </dependency>
-
-        <!-- 4.4 引入 dfss-data 和 dfss-exception 子模块，加上 ${project.version} 以保持一致 -->
         <dependency>
             <groupId>com.dfss.data</groupId>
             <artifactId>dfss-data</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.dfss.common</groupId>
+            <artifactId>dfss-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.dfss.exception</groupId>
             <artifactId>dfss-exception</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.dfss.springboot</groupId>
+            <artifactId>dfss-spring-boot</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
