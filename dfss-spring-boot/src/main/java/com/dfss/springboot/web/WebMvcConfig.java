@@ -22,6 +22,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry
                 .addInterceptor(apiLoggingInterceptor)
                 .addPathPatterns("/**")     // 拦截所有路径
-                .excludePathPatterns("/error"); // 排除 Spring Boot 默认的 /error 断点
+                .excludePathPatterns("/error"); // 排除 Spring Boot 默认的 /error 端点
     }
 }
