@@ -24,7 +24,7 @@
         <spring.boot.version>3.5.0</spring.boot.version>
         <mybatis.plus.version>3.5.12</mybatis.plus.version>
         <mysql.version>8.0.33</mysql.version>
-        <fastjson.vesrion>2.0.26</fastjson.vesrion>
+        <fastjson.version>2.0.26</fastjson.version>
         <lombok.version>1.18.30</lombok.version>
         <checkstyle.version>3.2.0</checkstyle.version>
     </properties>
