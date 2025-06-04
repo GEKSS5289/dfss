@@ -2,14 +2,13 @@
 package com.dfss.application;
 
 
-import com.alibaba.fastjson.JSON;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.dfss.data.util.DataBaseOperation;
 import com.dfss.application.entity.Product;
 import com.dfss.application.entity.User;
 import com.dfss.application.vo.UserVO;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,35 +25,40 @@ class DataBaseOperationTest {
 
     @Test
     void save_list_getOne_update_delete_works() {
-//        // 2. 插入几条
-//        User u1 = new User();
-//        u1.setName("Tom");
-//        u1.setEmail("tom@example.com");
-//        DataBaseOperation.insert(u1);
-//
-//
-//        // 2. 插入几条
-//        Product p1 = new Product();
-//        p1.setName("Tom");
-//        p1.setDescription("tom@example.com");
-//        DataBaseOperation.insert(p1);
-//
-//
-//        User query1 = new User();
-//        query1.setName("Tom");
-//
-//        IPage<UserVO> voPage = DataBaseOperation.page(query1, UserVO.class, 1, 10);
-//        log.info("{}", JSON.toJSONString(voPage));
-//        List<UserVO> vos = voPage.getRecords();
-//        log.info("{}", JSON.toJSONString(vos));
+        // insert user
+        User user = new User();
+        user.setName("Tom");
+        user.setEmail("tom@example.com");
+        int userInsert = DataBaseOperation.insert(user);
+        Assertions.assertThat(userInsert).isEqualTo(1);
+        Assertions.assertThat(user.getId()).isNotNull();
 
+        // insert product
+        Product product = new Product();
+        product.setName("Book");
+        product.setDescription("A book");
+        int productInsert = DataBaseOperation.insert(product);
+        Assertions.assertThat(productInsert).isEqualTo(1);
+        Assertions.assertThat(product.getId()).isNotNull();
 
-        List<User> users = DataBaseOperation.listByWrapper(
-                User.class,
-                DataBaseOperation.lambdaQuery(User.class)
-                        .isNotNull(User::getEmail)
-        );
+        // query page
+        User query = new User();
+        query.setName("Tom");
+        IPage<UserVO> page = DataBaseOperation.page(query, UserVO.class, 1, 10);
+        Assertions.assertThat(page.getTotal()).isEqualTo(1);
+        Assertions.assertThat(page.getRecords()).hasSize(1);
+        Assertions.assertThat(page.getRecords().get(0).getEmail()).isEqualTo("tom@example.com");
 
-        log.info("{}", JSON.toJSONString(users));
+        // update
+        user.setEmail("new@example.com");
+        DataBaseOperation.updateById(user);
+        User afterUpdate = DataBaseOperation.getById(User.class, user.getId());
+        Assertions.assertThat(afterUpdate.getEmail()).isEqualTo("new@example.com");
+
+        // delete
+        DataBaseOperation.deleteById(User.class, user.getId());
+        DataBaseOperation.deleteById(Product.class, product.getId());
+        Assertions.assertThat(DataBaseOperation.getById(User.class, user.getId())).isNull();
+        Assertions.assertThat(DataBaseOperation.getById(Product.class, product.getId())).isNull();
     }
 }
