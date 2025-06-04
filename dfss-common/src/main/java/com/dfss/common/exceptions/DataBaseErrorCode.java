@@ -1,5 +1,6 @@
-// 文件：com/dfsss/data/exception/DataBaseErrorCode.java
 package com.dfss.common.exceptions;
+
+import lombok.Getter;
 
 /**
  * <p>数据库操作异常枚举。列举了 DataBaseOperation 中可能抛出的各种错误类型。</p>
@@ -14,6 +15,7 @@ package com.dfss.common.exceptions;
  * @author shushun
  * @since 2025-06-02
  */
+@Getter
 public enum DataBaseErrorCode {
     /**
      * 传入的实体或 DTO 对象为 null。
@@ -35,9 +37,21 @@ public enum DataBaseErrorCode {
      */
     ENTITY_INSTANTIATION_FAILED("DB_OP_004", "无法实例化目标实体，请确保实体具有公共无参构造函数。");
 
-    /** 错误码 */
+    /**
+     * 错误码
+     * -- GETTER --
+     * 获取错误码（code）。
+     *
+     * @return 示例 "DB_OP_001"
+     */
     private final String code;
-    /** 默认错误消息 */
+    /**
+     * 默认错误消息
+     * -- GETTER --
+     * 获取默认错误消息。
+     *
+     * @return 示例 "实体或 DTO 对象不能为空。"
+     */
     private final String message;
 
     DataBaseErrorCode(String code, String message) {
@@ -45,21 +59,4 @@ public enum DataBaseErrorCode {
         this.message = message;
     }
 
-    /**
-     * 获取错误码（code）。
-     *
-     * @return 示例 "DB_OP_001"
-     */
-    public String getCode() {
-        return code;
-    }
-
-    /**
-     * 获取默认错误消息。
-     *
-     * @return 示例 "实体或 DTO 对象不能为空。"
-     */
-    public String getMessage() {
-        return message;
-    }
 }

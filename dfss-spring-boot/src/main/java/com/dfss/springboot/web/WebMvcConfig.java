@@ -1,10 +1,9 @@
-// 文件：dfss-spring-boot/src/main/java/com/dfss/springboot/web/WebMvcConfig.java
 package com.dfss.springboot.web;
 
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * Web MVC 配置：注册自定义拦截器
