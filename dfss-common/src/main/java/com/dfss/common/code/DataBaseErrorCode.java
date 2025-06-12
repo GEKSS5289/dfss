@@ -1,4 +1,4 @@
-package com.dfss.common.exceptions;
+package com.dfss.common.code;
 
 import lombok.Getter;
 
@@ -42,7 +42,6 @@ public enum DataBaseErrorCode {
      * -- GETTER --
      * 获取错误码（code）。
      *
-     * @return 示例 "DB_OP_001"
      */
     private final String code;
     /**
@@ -50,7 +49,6 @@ public enum DataBaseErrorCode {
      * -- GETTER --
      * 获取默认错误消息。
      *
-     * @return 示例 "实体或 DTO 对象不能为空。"
      */
     private final String message;
 
