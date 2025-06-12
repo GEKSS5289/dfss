@@ -1,6 +1,9 @@
 // 文件：com/dfsss/data/exception/DataBaseOperationException.java
 package com.dfss.common.exceptions;
 
+import com.dfss.common.code.DataBaseErrorCode;
+import lombok.Getter;
+
 /**
  * <p>统一的数据操作运行时异常。所有 DataBaseOperation 中的异常场景都使用此类抛出，</p>
  * <p>并通过 {@link DataBaseErrorCode} 指定具体的错误类型与默认提示语。</p>
@@ -20,6 +23,7 @@ package com.dfss.common.exceptions;
  * @author shushun
  * @since 2025-06-02
  */
+@Getter
 public class DataBaseOperationException extends RuntimeException {
 
     /** 错误码，例如 "DB_OP_001" */
@@ -77,22 +81,4 @@ public class DataBaseOperationException extends RuntimeException {
         this.errorMessage = customMessage;
     }
 
-    /**
-     * 获取错误码。
-     *
-     * @return 错误码字符串
-     */
-    public String getErrorCode() {
-        return errorCode;
-    }
-
-    /**
-     * 获取错误消息。
-     *
-     * @return 自定义或枚举默认错误消息
-     */
-    @Override
-    public String getMessage() {
-        return errorMessage;
-    }
 }

@@ -6,16 +6,10 @@
 <module name="Checker">
     <!-- ② 与语法树无关的顶层规则 -->
     <module name="TreeWalker">
-        <!-- 方法名驼峰 -->
         <module name="MethodName"/>
-        <!-- 左大括号位置：eol = 行尾，nl = 另起一行 -->
         <module name="LeftCurly">
             <property name="option" value="eol"/>
-
-            <!-- 需要时可指定 tokens，例如只检查 CLASS_DEF、METHOD_DEF -->
-            <!-- <property name="tokens" value="CLASS_DEF,METHOD_DEF"/> -->
         </module>
-        <!-- 禁用 System.out.print 调试代码 -->
         <module name="RegexpSinglelineJava">
             <property name="format" value="System\.out\.print"/>
             <property name="message" value="请使用 Logger 而不是 System.out.print"/>
@@ -23,15 +17,8 @@
         </module>
     </module>
 
-    <!-- ② 与语法树无关的顶层规则 -->
     <module name="LineLength">
         <property name="max" value="120"/>
-        <!--         <property name="message" value="请不要超过20字符"/>-->
+        <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
     </module>
-
-
-    <!--    <module name="IllegalThrows">-->
-    <!--        <property name="illegalClassNames"-->
-    <!--                  value="java.lang.RuntimeException,java.lang.Exception"/>-->
-    <!--    </module>-->
 </module>
